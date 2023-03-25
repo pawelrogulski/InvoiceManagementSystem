@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import progulski.invoicemanagmentsystem.domain.Invoice;
+import progulski.invoicemanagmentsystem.domain.Item;
+import progulski.invoicemanagmentsystem.repository.ItemRepository;
 import progulski.invoicemanagmentsystem.domain.Role;
 import progulski.invoicemanagmentsystem.domain.User;
 import progulski.invoicemanagmentsystem.repository.InvoiceRepository;
@@ -12,10 +14,7 @@ import progulski.invoicemanagmentsystem.repository.UserRepository;
 
 import javax.persistence.EntityExistsException;
 import java.rmi.NoSuchObjectException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Optional;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -23,6 +22,8 @@ public class AppService {
     private final InvoiceRepository invoiceRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final ItemRepository itemRepository;
+
     public Role addRole(String role){
         String[] possibleRoles = {"ROLE_CUSTOMER","ROLE_EMPLOYEE"}; //lista wszystkich zaimplementowanych w aplikacji ról
         if(!Arrays.asList(possibleRoles).contains(role)){
@@ -79,7 +80,15 @@ public class AppService {
     }
 
     public Invoice addInvoice(Invoice invoice) {
-        return invoiceRepository.save(invoice);
+        invoice.getItems().stream().forEach(item -> item.setTotalPrice());
+        invoice.setTotalPrice();
+        final Invoice savedInvoice = invoiceRepository.save(invoice);
+        invoice.getItems().stream().forEach(item -> item.setInvoice(savedInvoice));
+        invoice.getItems().stream().forEach(item -> addItem(item));
+        return savedInvoice;
+    }
+    public void addItem(Item item){
+        itemRepository.save(item);
     }
 
     public Invoice getInvoice(int id) throws NoSuchObjectException {
@@ -91,4 +100,9 @@ public class AppService {
             throw new NoSuchObjectException("Invoice doesn't exist");
         }
     }
+
+//    public Set<Invoice> getInvoicesFromCurrentMonth() {
+//        int currentMonth = LocalDate.now().getMonth().getValue();
+//        return invoiceRepository.getInvoicesFromCurrentMonth();
+//    }
 }
